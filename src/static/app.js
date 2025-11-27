@@ -20,14 +20,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Participants section HTML
+        let participantsHtml = `
+          <div class="activity-card-participants">
+            <h5>Participants</h5>
+            ${
+              details.participants.length > 0
+                ? `<ul class="participants-list">${details.participants.map(p => `
+                    <li class="participant-item">
+                      <span class="participant-name">${p}</span>
+                      <span class="delete-icon" title="Remove" data-activity="${name}" data-participant="${p}">&#128465;</span>
+                    </li>
+                  `).join("")}</ul>`
+                : `<p style="color:#888;">No participants yet.</p>`
+            }
+          </div>
+        `;
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          ${participantsHtml}
         `;
 
         activitiesList.appendChild(activityCard);
+
+        // Add event listeners for delete icons
+        setTimeout(() => {
+          const deleteIcons = activityCard.querySelectorAll('.delete-icon');
+          deleteIcons.forEach(icon => {
+            icon.addEventListener('click', async (e) => {
+              const activity = icon.getAttribute('data-activity');
+              const participant = icon.getAttribute('data-participant');
+              try {
+                const response = await fetch(`/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(participant)}`, {
+                  method: 'POST',
+                });
+                if (response.ok) {
+                  fetchActivities(); // Refresh list
+                } else {
+                  alert('Failed to unregister participant.');
+                }
+              } catch (err) {
+                alert('Error occurred while unregistering.');
+              }
+            });
+          });
+        }, 0);
 
         // Add option to select dropdown
         const option = document.createElement("option");
@@ -62,6 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities(); // Refresh activities list after signup
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
